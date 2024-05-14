@@ -250,7 +250,7 @@ public class MapView extends com.google.android.gms.maps.MapView implements Goog
 
     markerCollection.setInfoWindowAdapter(this);
     markerCollection.setOnMarkerDragListener(this);
-    this.map.setOnPoiClickListener(this);
+    // this.map.setOnPoiClickListener(this);
     this.map.setOnIndoorStateChangeListener(this);
 
     applyBridgedProps();
