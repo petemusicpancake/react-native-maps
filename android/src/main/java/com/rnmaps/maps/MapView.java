@@ -341,6 +341,18 @@ public class MapView extends com.google.android.gms.maps.MapView implements Goog
         super.onSaveInstanceState(savedMapState);
         super.onPause();
         super.onStop();
+        
+        // Save features before detaching
+        savedFeatures.clear();
+        for (int i = 0; i < features.size(); i++) {
+            savedFeatures.put(i, features.get(i));
+        }
+        
+        // Remove features from map to prevent duplicates on reattach
+        for (int i = features.size() - 1; i >= 0; i--) {
+            removeFeatureAt(i);
+        }
+        
         removeView(attacherGroup);
         attacherGroup = null;
         detachLifecycleObserver();
