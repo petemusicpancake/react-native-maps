@@ -318,51 +318,43 @@ public class MapView extends com.google.android.gms.maps.MapView implements Goog
     protected void onAttachedToWindow() {
         super.onAttachedToWindow();
         attachLifecycleObserver();
-        
         if (savedMapState != null) {
-            // Restore the map with saved state (preserves region, zoom, etc.)
             super.onCreate(savedMapState);
             super.onStart();
             super.onResume();
-            paused = false;
             prepareAttacherView();
-            getMapAsync((restoredMap)->{
-                onMapReady(restoredMap);
-                // Restore all saved features (markers, polylines, etc.)
+            getMapAsync((map)->{
+                onMapReady(map);
                 savedFeatures.forEach((index, feature) -> {
                     addFeature(feature, index);
                 });
             });
-        } else {
-            // First time initialization
-            prepareAttacherView();
         }
     }
 
     // Override onDetachedFromWindow to detach lifecycle observer
     @Override
     protected void onDetachedFromWindow() {
-        // Always save current map state for recovery
         if (savedMapState == null) {
             savedMapState = new Bundle();
         }
         super.onSaveInstanceState(savedMapState);
+        super.onPause();
+        super.onStop();
         
-        // Save features before detaching to ensure they persist
+        // Save features before detaching
         savedFeatures.clear();
         for (int i = 0; i < features.size(); i++) {
             savedFeatures.put(i, features.get(i));
         }
         
-        // Properly pause and stop the map to ensure state is saved
-        super.onPause();
-        super.onStop();
-        paused = true;
+        // Remove features from map to prevent duplicates on reattach
+        for (int i = features.size() - 1; i >= 0; i--) {
+            removeFeatureAt(i);
+        }
         
-        // Clean up attacherGroup but keep features in savedFeatures
         removeView(attacherGroup);
         attacherGroup = null;
-        
         detachLifecycleObserver();
         super.onDetachedFromWindow();
     }
