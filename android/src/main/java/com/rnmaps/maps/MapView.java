@@ -319,27 +319,21 @@ public class MapView extends com.google.android.gms.maps.MapView implements Goog
         super.onAttachedToWindow();
         attachLifecycleObserver();
         
-        // If the map was just paused and is still valid, simply resume it
-        if (paused && map != null && !destroyed) {
-            super.onResume();
-            paused = false;
-            return;
-        }
-        
-        // Only fully recreate if we don't have a map instance
-        if (map == null && savedMapState != null) {
+        if (savedMapState != null) {
+            // Restore the map with saved state (preserves region, zoom, etc.)
             super.onCreate(savedMapState);
             super.onStart();
             super.onResume();
             paused = false;
             prepareAttacherView();
-            getMapAsync((map)->{
-                onMapReady(map);
+            getMapAsync((restoredMap)->{
+                onMapReady(restoredMap);
+                // Restore all saved features (markers, polylines, etc.)
                 savedFeatures.forEach((index, feature) -> {
                     addFeature(feature, index);
                 });
             });
-        } else if (map == null) {
+        } else {
             // First time initialization
             prepareAttacherView();
         }
@@ -348,20 +342,26 @@ public class MapView extends com.google.android.gms.maps.MapView implements Goog
     // Override onDetachedFromWindow to detach lifecycle observer
     @Override
     protected void onDetachedFromWindow() {
-        // Save current map state for recovery
+        // Always save current map state for recovery
         if (savedMapState == null) {
             savedMapState = new Bundle();
         }
         super.onSaveInstanceState(savedMapState);
         
-        // Pause the map but don't stop it to minimize recreation
-        if (!paused) {
-            super.onPause();
-            paused = true;
+        // Save features before detaching to ensure they persist
+        savedFeatures.clear();
+        for (int i = 0; i < features.size(); i++) {
+            savedFeatures.put(i, features.get(i));
         }
         
-        // Don't remove features or attacherGroup - keep them in memory
-        // This prevents the map from having to recreate everything
+        // Properly pause and stop the map to ensure state is saved
+        super.onPause();
+        super.onStop();
+        paused = true;
+        
+        // Clean up attacherGroup but keep features in savedFeatures
+        removeView(attacherGroup);
+        attacherGroup = null;
         
         detachLifecycleObserver();
         super.onDetachedFromWindow();
